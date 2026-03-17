@@ -89,6 +89,15 @@ export default function AdminMode() {
     // Check if game ends
     if (Object.keys(newRevealedMap).length >= 10) {
       updates.is_active = false // All 10 revealed -> auto end game
+    } else {
+      // User rule: Auto-switch turn on correct answer too!
+      // But we ONLY pass the turn if the other team has less than 3 strikes.
+      const otherTeam = session.current_team === 1 ? 2 : 1;
+      const otherTeamStrikes = otherTeam === 1 ? session.team_1_strikes : session.team_2_strikes;
+      
+      if (otherTeamStrikes < 3) {
+           updates.current_team = otherTeam; // Pass turn
+      }
     }
     
     updateSession(updates)
@@ -136,7 +145,7 @@ export default function AdminMode() {
   }
 
   return (
-    <div className="container anim-slide-down" style={{ maxWidth: '800px', paddingBottom: '3rem' }}>
+    <div className="container anim-slide-down" style={{ maxWidth: '1200px', paddingBottom: '3rem' }}>
       
       {/* Header Info */}
       <div className="glass-panel" style={{ padding: '1rem 1.5rem', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -149,13 +158,14 @@ export default function AdminMode() {
         </button>
       </div>
 
-      {/* Teams Controls */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '2rem' }}>
+      {/* 3-Column Layout: Team 1 (Right), List (Center), Team 2 (Left) */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2rem', alignItems: 'flex-start' }}>
         
-        {/* Team 1 Card */}
+        {/* Team 1 Card (Right Side in RTL) */}
         <div 
           className="glass-panel" 
           style={{ 
+            flex: '1 1 250px',
             padding: '1.5rem', 
             textAlign: 'center', 
             backgroundColor: session.team_1_strikes >= 3 ? 'rgba(239, 68, 68, 0.1)' : 'var(--bg-card)',
@@ -180,16 +190,81 @@ export default function AdminMode() {
             className="btn" 
             style={{ width: '100%', background: 'rgba(239, 68, 68, 0.2)', color: 'var(--accent-red)', border: '1px solid var(--accent-red)' }}
             onClick={(e) => { e.stopPropagation(); handleStrike(1); }}
-            disabled={session.team_1_strikes >= 3 || isGameOver}
+            disabled={session.team_1_strikes >= 3 || isGameOver || session.current_team !== 1}
           >
             ❌ خطأ (Strike)
           </button>
         </div>
 
-        {/* Team 2 Card */}
+        {/* Answers List (Center) */}
+        <div style={{ flex: '2 1 400px', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
+          <h3 className="title-glow" style={{ marginBottom: '0.5rem', fontSize: '1.4rem', textAlign: 'center' }}>لوحة الإجابات</h3>
+          {answers.map((ans) => {
+            const answeringTeam = revealedMap[ans.rank]
+            const isRevealed = !!answeringTeam
+            
+            // Determine color based on who answered that question
+            const rowColor = !isRevealed ? 'var(--bg-card)' : answeringTeam === 1 ? 'rgba(59, 130, 246, 0.2)' : 'rgba(236, 72, 153, 0.2)'
+            const borderColor = !isRevealed ? 'var(--glass-border)' : answeringTeam === 1 ? 'var(--team1-color)' : 'var(--team2-color)'
+            const iconColor = !isRevealed ? '#fff' : answeringTeam === 1 ? 'var(--team1-color)' : 'var(--team2-color)'
+            
+            return (
+              <div 
+                key={ans.id}
+                className={`glass-panel flex-between ${isRevealed ? 'anim-fade-in' : ''}`}
+                style={{ 
+                  padding: '1rem 1.5rem',
+                  backgroundColor: rowColor,
+                  borderColor: borderColor
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: isRevealed ? borderColor : 'var(--btn-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#fff', flexShrink: 0 }}>
+                    {ans.rank}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span style={{ fontSize: '1.2rem', fontWeight: '600', color: isRevealed ? '#fff' : 'var(--text-muted)' }}>
+                      {ans.answer_ar}
+                    </span>
+                    {isRevealed && (
+                      <span style={{ fontSize: '0.8rem', color: borderColor, fontWeight: 'bold' }}>
+                        (أجاب: الفريق {answeringTeam === 1 ? 'الأول' : 'الثاني'})
+                      </span>
+                    )}
+                  </div>
+                </div>
+                
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <span className="badge" style={{ background: 'var(--bg-surface)', padding: '0.3rem 0.6rem', borderRadius: '4px', fontSize: '1rem', color: 'var(--accent-gold)', whiteSpace: 'nowrap' }}>
+                    {ans.points} نقطة
+                  </span>
+                  
+                  <button 
+                    className="btn"
+                    style={{ 
+                      padding: '0.4rem 0.8rem', 
+                      background: isRevealed ? 'transparent' : 'var(--accent-green)',
+                      color: isRevealed ? iconColor : '#fff',
+                      border: isRevealed ? `1px solid ${borderColor}` : 'none',
+                      fontSize: '0.9rem'
+                    }}
+                    onClick={() => handleReveal(ans.rank)}
+                    disabled={isRevealed}
+                  >
+                    {isRevealed ? <Eye size={18} color={iconColor}/> : <EyeOff size={18} />}
+                    {isRevealed ? 'مكشوف' : 'كشف'}
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Team 2 Card (Left Side in RTL) */}
         <div 
           className="glass-panel" 
           style={{ 
+            flex: '1 1 250px',
             padding: '1.5rem', 
             textAlign: 'center',
             backgroundColor: session.team_2_strikes >= 3 ? 'rgba(239, 68, 68, 0.1)' : 'var(--bg-card)',
@@ -214,77 +289,13 @@ export default function AdminMode() {
             className="btn" 
             style={{ width: '100%', background: 'rgba(239, 68, 68, 0.2)', color: 'var(--accent-red)', border: '1px solid var(--accent-red)' }}
             onClick={(e) => { e.stopPropagation(); handleStrike(2); }}
-            disabled={session.team_2_strikes >= 3 || isGameOver}
+            disabled={session.team_2_strikes >= 3 || isGameOver || session.current_team !== 2}
           >
             ❌ خطأ (Strike)
           </button>
         </div>
 
       </div>
-
-      {/* Answers Grid for Admin */}
-      <h3 className="title-glow" style={{ marginBottom: '1rem', fontSize: '1.4rem' }}>لوحة الإجابات</h3>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-        {answers.map((ans) => {
-          const answeringTeam = revealedMap[ans.rank]
-          const isRevealed = !!answeringTeam
-          
-          // Determine color based on who answered that question
-          const rowColor = !isRevealed ? 'var(--bg-card)' : answeringTeam === 1 ? 'rgba(59, 130, 246, 0.2)' : 'rgba(236, 72, 153, 0.2)'
-          const borderColor = !isRevealed ? 'var(--glass-border)' : answeringTeam === 1 ? 'var(--team1-color)' : 'var(--team2-color)'
-          const iconColor = !isRevealed ? '#fff' : answeringTeam === 1 ? 'var(--team1-color)' : 'var(--team2-color)'
-          
-          return (
-            <div 
-              key={ans.id}
-              className={`glass-panel flex-between ${isRevealed ? 'anim-fade-in' : ''}`}
-              style={{ 
-                padding: '1rem 1.5rem',
-                backgroundColor: rowColor,
-                borderColor: borderColor
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: isRevealed ? borderColor : 'var(--btn-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#fff' }}>
-                  {ans.rank}
-                </div>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <span style={{ fontSize: '1.3rem', fontWeight: '600', color: isRevealed ? '#fff' : 'var(--text-muted)' }}>
-                    {ans.answer_ar}
-                  </span>
-                  {isRevealed && (
-                    <span style={{ fontSize: '0.8rem', color: borderColor, fontWeight: 'bold' }}>
-                      (أجاب: الفريق {answeringTeam === 1 ? 'الأول' : 'الثاني'})
-                    </span>
-                  )}
-                </div>
-              </div>
-              
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <span className="badge" style={{ background: 'var(--bg-surface)', padding: '0.3rem 0.6rem', borderRadius: '4px', fontSize: '1.1rem', color: 'var(--accent-gold)' }}>
-                  {ans.points} نقطة
-                </span>
-                
-                <button 
-                  className="btn"
-                  style={{ 
-                    padding: '0.5rem 1rem', 
-                    background: isRevealed ? 'transparent' : 'var(--accent-green)',
-                    color: isRevealed ? iconColor : '#fff',
-                    border: isRevealed ? `1px solid ${borderColor}` : 'none'
-                  }}
-                  onClick={() => handleReveal(ans.rank)}
-                  disabled={isRevealed}
-                >
-                  {isRevealed ? <Eye size={20} color={iconColor}/> : <EyeOff size={20} />}
-                  {isRevealed ? 'مكشوف' : 'كشف'}
-                </button>
-              </div>
-            </div>
-          )
-        })}
-      </div>
-
     </div>
   )
 }

@@ -122,7 +122,7 @@ export default function ContestantMode() {
       {/* Winner Overlay Splash */}
       {isGameOver && (
         <div className="anim-fade-in" style={{
-          position: 'absolute',
+          position: 'fixed',
           top: 0, left: 0, right: 0, bottom: 0,
           background: 'rgba(10, 15, 29, 0.85)',
           backdropFilter: 'blur(10px)',
