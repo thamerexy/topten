@@ -258,8 +258,12 @@ export default function AdminMode() {
                   </span>
                 </div>
 
-                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                  <span style={{ fontSize: '1.1rem', fontWeight: '800', color: isRevealed ? '#fff' : 'var(--text-muted)', lineHeight: '1.3' }}>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: 0 }}>
+                  <span 
+                    className="truncate" 
+                    title={ans.answer_ar}
+                    style={{ fontSize: '1.1rem', fontWeight: '800', color: isRevealed ? '#fff' : 'var(--text-muted)', lineHeight: '1.3' }}
+                  >
                     {ans.answer_ar}
                   </span>
                 </div>

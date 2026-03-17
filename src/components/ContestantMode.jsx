@@ -121,7 +121,9 @@ export default function ContestantMode() {
   }
 
   const [spotlightRank, setSpotlightRank] = useState(null)
+  const [showStrike, setShowStrike] = useState(false)
   const prevKeys = useRef([])
+  const prevStrikes = useRef({ t1: 0, t2: 0 })
 
   const activeQuestion = questions.find(q => q.id === session.question_id)
   
@@ -140,16 +142,23 @@ export default function ContestantMode() {
   useEffect(() => {
     const currentKeys = Object.keys(revealedMap)
     if (currentKeys.length > prevKeys.current.length && prevKeys.current.length > 0) {
-      // Find the new key that wasn't there before
       const newKey = currentKeys.find(k => !prevKeys.current.includes(k))
       if (newKey) {
         setSpotlightRank(Number(newKey))
-        // Auto-remove the spotlight overlay after 3.2 seconds
         setTimeout(() => setSpotlightRank(null), 3200)
       }
     }
     prevKeys.current = currentKeys
   }, [revealedMap])
+
+  // Cinematic Strike trigger
+  useEffect(() => {
+    if (session.team_1_strikes > prevStrikes.current.t1 || session.team_2_strikes > prevStrikes.current.t2) {
+      setShowStrike(true)
+      setTimeout(() => setShowStrike(false), 1500)
+    }
+    prevStrikes.current = { t1: session.team_1_strikes, t2: session.team_2_strikes }
+  }, [session.team_1_strikes, session.team_2_strikes])
 
   // Determine Game state and Winners
   const isGameOver = !session.is_active;
@@ -319,7 +328,19 @@ export default function ContestantMode() {
           ))}
         </div>
       </div>
-
+      {/* Strike Overlay Cinematic */}
+      {showStrike && (
+        <div className="strike-overlay">
+          <div className="strike-icon" style={{ 
+            fontSize: '30rem', 
+            fontWeight: '900', 
+            color: 'var(--accent-red)', 
+            textShadow: '0 0 50px rgba(239, 68, 68, 0.8)' 
+          }}>
+            X
+          </div>
+        </div>
+      )}
     </div>
   )
 }
