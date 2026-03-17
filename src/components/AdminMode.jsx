@@ -85,6 +85,15 @@ export default function AdminMode() {
 
   // Active Session View
   const activeQuestion = questions.find(q => q.id === session.question_id)
+
+  // If we have a session but data isn't fully loaded yet (race condition)
+  if (!activeQuestion && session.is_active) {
+    return (
+      <div className="container flex-center" style={{ minHeight: '80vh' }}>
+        <h2 className="title-glow anim-pulse">جاري تحميل بيانات السؤال...</h2>
+      </div>
+    )
+  }
   
   // Safely parse JSONB column object
   let revealedMap = {}
@@ -198,6 +207,11 @@ export default function AdminMode() {
 
         {/* Swipeable Answers Cards for Admin */}
         <div className="carousel-container">
+          {answers.length === 0 && (
+            <div className="carousel-card glass-panel flex-center" style={{ minHeight: '300px' }}>
+              <p className="anim-pulse">جاري تحميل الإجابات...</p>
+            </div>
+          )}
           {answers.map((ans) => {
             const answeringTeam = revealedMap[ans.rank]
             const isRevealed = !!answeringTeam

@@ -40,7 +40,7 @@ export function GameProvider({ children }) {
     } else {
       setLoading(false)
     }
-  }, [session?.id])
+  }, [session?.id, session?.question_id])
 
   async function loadInitialData() {
     setLoading(true)
@@ -57,8 +57,12 @@ export function GameProvider({ children }) {
         .limit(1)
 
       if (activeSessions && activeSessions.length > 0) {
-        setSession(activeSessions[0])
-        await loadAnswersForQuestion(activeSessions[0].question_id)
+        const activeSession = activeSessions[0]
+        setSession(activeSession)
+        // Proactively load answers if we have a question_id
+        if (activeSession.question_id) {
+          await loadAnswersForQuestion(activeSession.question_id)
+        }
       }
     } catch (err) {
       console.error(err)
