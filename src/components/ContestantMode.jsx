@@ -93,7 +93,12 @@ export default function ContestantMode() {
   const column1 = answers.slice(0, 5) // Ranks 1-5
   const column2 = answers.slice(5, 10) // Ranks 6-10
   
-  const revealedMap = session.revealed_answers || {}
+  // Safely parse JSONB column object
+  let revealedMap = {}
+  try {
+    revealedMap = typeof session.revealed_answers === 'string' ? JSON.parse(session.revealed_answers) : session.revealed_answers || {}
+  } catch(e) { /* ignore */ }
+  if (Array.isArray(revealedMap)) revealedMap = {};
 
   // Determine Game state and Winners
   const isGameOver = !session.is_active;

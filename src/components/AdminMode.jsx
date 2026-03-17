@@ -52,8 +52,12 @@ export default function AdminMode() {
   // Active Session View
   const activeQuestion = questions.find(q => q.id === session.question_id)
   
-  // Make sure we have a clean object object since it is a JSON field
-  const revealedMap = session.revealed_answers || {}
+  // Safely parse JSONB column object
+  let revealedMap = {}
+  try {
+    revealedMap = typeof session.revealed_answers === 'string' ? JSON.parse(session.revealed_answers) : session.revealed_answers || {}
+  } catch(e) { /* ignore */ }
+  if (Array.isArray(revealedMap)) revealedMap = {};
   
   // Calculate if the game is over
   const totalRevealed = Object.keys(revealedMap).length
