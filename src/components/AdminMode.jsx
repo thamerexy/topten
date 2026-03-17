@@ -110,8 +110,16 @@ export default function AdminMode() {
     if (newTeam1Strikes >= 3 && newTeam2Strikes >= 3) {
       updates.is_active = false
     } else {
-      // Just one team stroke out or still has tries, switch to next valid team
-      updates.current_team = getNextTeam(session.current_team, newTeam1Strikes, newTeam2Strikes)
+      // Automatic Turn Switching Rule: 
+      // If the current team gets a strike, the turn PASSES to the other team.
+      // But we ONLY pass the turn if the other team has less than 3 strikes.
+      const otherTeam = session.current_team === 1 ? 2 : 1;
+      const otherTeamStrikes = otherTeam === 1 ? newTeam1Strikes : newTeam2Strikes;
+      
+      if (otherTeamStrikes < 3) {
+           updates.current_team = otherTeam; // Pass turn
+      } 
+      // Else: the other team has 3 strikes, so the turn STAYS with the current team.
     }
 
     updateSession(updates)

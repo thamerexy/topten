@@ -124,23 +124,13 @@ export function GameProvider({ children }) {
     }
   }
 
-  // Helper to determine the next playing team
-  function getNextTeam(currentTeam, strikes1, strikes2) {
-    const otherTeam = currentTeam === 1 ? 2 : 1;
-    // If the other team already has 3 strikes, the turn stays with the current team
-    if (otherTeam === 1 && strikes1 >= 3) return 2;
-    if (otherTeam === 2 && strikes2 >= 3) return 1;
-    return otherTeam;
-  }
-
   const value = {
     session,
     questions,
     answers,
     loading,
     startNewGame,
-    updateSession,
-    getNextTeam
+    updateSession
   }
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>
