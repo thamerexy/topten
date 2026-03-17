@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { useGame } from '../context/GameContext'
-import { Play, PlayCircle, Eye, EyeOff, AlertTriangle, RefreshCcw } from 'lucide-react'
+import { PlayCircle, Eye, EyeOff, AlertTriangle } from 'lucide-react'
 
 export default function AdminMode() {
-  const { session, questions, answers, loading, startNewGame, updateSession } = useGame()
+  const { session, questions, answers, loading, startNewGame, updateSession, getNextTeam } = useGame()
   const [selectedTopic, setSelectedTopic] = useState('')
 
   if (loading) {
@@ -52,42 +52,84 @@ export default function AdminMode() {
   // Active Session View
   const activeQuestion = questions.find(q => q.id === session.question_id)
   
+  // Make sure we have a clean object object since it is a JSON field
+  const revealedMap = session.revealed_answers || {}
+  
+  // Calculate if the game is over
+  const totalRevealed = Object.keys(revealedMap).length
+  const allRevealed = totalRevealed === 10
+  const bothEliminated = session.team_1_strikes >= 3 && session.team_2_strikes >= 3
+  const isGameOver = allRevealed || bothEliminated
+  
   const handleReveal = (rank) => {
-    if (session.revealed_answers.includes(rank)) return
+    if (revealedMap[rank] || isGameOver) return
     
-    // Add points to the current team
+    // Determine points and update the score map
     const answer = answers.find(a => a.rank === rank)
     const points = answer?.points || 10
     
+    // Add rank to the current team's solved list
+    const newRevealedMap = { ...revealedMap, [rank]: session.current_team }
+    
     const updates = {
-      revealed_answers: [...session.revealed_answers, rank]
+      revealed_answers: newRevealedMap
     }
     
+    // Add points to current team
     if (session.current_team === 1) {
       updates.team_1_score = session.team_1_score + points
     } else {
       updates.team_2_score = session.team_2_score + points
+    }
+
+    // Switch turns unless game is literally ending now
+    if (Object.keys(newRevealedMap).length < 10) {
+      updates.current_team = getNextTeam(session.current_team, session.team_1_strikes, session.team_2_strikes)
+    } else {
+      updates.is_active = false // All 10 revealed -> auto end game
     }
     
     updateSession(updates)
   }
 
   const handleStrike = (team) => {
-    if (team === 1 && session.team_1_strikes < 3) {
-      updateSession({ team_1_strikes: session.team_1_strikes + 1 })
-    } else if (team === 2 && session.team_2_strikes < 3) {
-      updateSession({ team_2_strikes: session.team_2_strikes + 1 })
-    }
-  }
+    if (isGameOver) return
+    
+    const updates = {}
+    
+    let newTeam1Strikes = session.team_1_strikes
+    let newTeam2Strikes = session.team_2_strikes
 
-  const handleSwitchTeam = (team) => {
-    updateSession({ current_team: team })
+    if (team === 1 && newTeam1Strikes < 3) {
+      newTeam1Strikes += 1;
+      updates.team_1_strikes = newTeam1Strikes;
+    } else if (team === 2 && newTeam2Strikes < 3) {
+      newTeam2Strikes += 1;
+      updates.team_2_strikes = newTeam2Strikes;
+    }
+
+    // Check if both teams are locked out -> game over
+    if (newTeam1Strikes >= 3 && newTeam2Strikes >= 3) {
+      updates.is_active = false
+    } else {
+      // Just one team stroke out or still has tries, switch to next valid team
+      updates.current_team = getNextTeam(session.current_team, newTeam1Strikes, newTeam2Strikes)
+    }
+
+    updateSession(updates)
   }
 
   const handleEndGame = () => {
-    if (window.confirm('هل أنت متأكد من إنهاء اللعبة الحالية؟')) {
+    if (window.confirm('هل أنت متأكد من إنهاء اللعبة الحالية وإعلان النتيجة؟')) {
       updateSession({ is_active: false })
     }
+  }
+  
+  const handleSwitchTeam = (team) => {
+    // Only allow manual switch if not 3 strikes
+    if (team === 1 && session.team_1_strikes >= 3) return
+    if (team === 2 && session.team_2_strikes >= 3) return
+    updateSession({ current_team: team })
   }
 
   return (
@@ -96,10 +138,11 @@ export default function AdminMode() {
       {/* Header Info */}
       <div className="glass-panel" style={{ padding: '1rem 1.5rem', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h2 style={{ fontSize: '1.4rem', color: 'var(--text-highlight)' }}>
-          {activeQuestion?.topic_ar}
+          {activeQuestion?.topic_ar} 
+          {isGameOver && <span style={{ color: 'var(--accent-red)', marginRight: '1rem' }}>(انتهت اللعبة)</span>}
         </h2>
-        <button className="btn btn-ghost" style={{ padding: '0.5rem 1rem', borderColor: 'var(--accent-red)', color: 'var(--accent-red)' }} onClick={handleEndGame}>
-           إنهاء
+        <button className="btn btn-ghost" style={{ padding: '0.5rem 1rem', borderColor: 'var(--accent-red)', color: 'var(--accent-red)' }} onClick={handleEndGame} disabled={isGameOver}>
+           إنهاء وإعلان النتيجة
         </button>
       </div>
 
@@ -112,12 +155,16 @@ export default function AdminMode() {
           style={{ 
             padding: '1.5rem', 
             textAlign: 'center', 
+            backgroundColor: session.team_1_strikes >= 3 ? 'rgba(239, 68, 68, 0.1)' : 'var(--bg-card)',
             border: session.current_team === 1 ? '2px solid var(--team1-color)' : '1px solid var(--glass-border)',
             boxShadow: session.current_team === 1 ? '0 0 15px var(--team1-glow)' : 'none',
-            transition: 'all 0.3s'
+            transition: 'all 0.3s',
+            opacity: session.team_1_strikes >= 3 ? 0.6 : 1,
+            cursor: session.team_1_strikes >= 3 ? 'not-allowed' : 'pointer'
           }}
           onClick={() => handleSwitchTeam(1)}
         >
+          <div style={{ visibility: session.current_team === 1 ? 'visible' : 'hidden', color: 'var(--team1-color)', fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>▼ دور الفريق ▼</div>
           <h3 style={{ color: 'var(--team1-color)', fontSize: '1.5rem', marginBottom: '0.5rem' }}>الفريق الأول</h3>
           <p style={{ fontSize: '2rem', fontWeight: 'bold' }}>{session.team_1_score}</p>
           
@@ -132,7 +179,7 @@ export default function AdminMode() {
             className="btn" 
             style={{ width: '100%', background: 'rgba(239, 68, 68, 0.2)', color: 'var(--accent-red)', border: '1px solid var(--accent-red)' }}
             onClick={(e) => { e.stopPropagation(); handleStrike(1); }}
-            disabled={session.team_1_strikes >= 3}
+            disabled={session.team_1_strikes >= 3 || isGameOver}
           >
             ❌ خطأ (Strike)
           </button>
@@ -144,12 +191,16 @@ export default function AdminMode() {
           style={{ 
             padding: '1.5rem', 
             textAlign: 'center',
+            backgroundColor: session.team_2_strikes >= 3 ? 'rgba(239, 68, 68, 0.1)' : 'var(--bg-card)',
             border: session.current_team === 2 ? '2px solid var(--team2-color)' : '1px solid var(--glass-border)',
             boxShadow: session.current_team === 2 ? '0 0 15px var(--team2-glow)' : 'none',
-            transition: 'all 0.3s'
+            transition: 'all 0.3s',
+            opacity: session.team_2_strikes >= 3 ? 0.6 : 1,
+            cursor: session.team_2_strikes >= 3 ? 'not-allowed' : 'pointer'
           }}
           onClick={() => handleSwitchTeam(2)}
         >
+          <div style={{ visibility: session.current_team === 2 ? 'visible' : 'hidden', color: 'var(--team2-color)', fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>▼ دور الفريق ▼</div>
           <h3 style={{ color: 'var(--team2-color)', fontSize: '1.5rem', marginBottom: '0.5rem' }}>الفريق الثاني</h3>
           <p style={{ fontSize: '2rem', fontWeight: 'bold' }}>{session.team_2_score}</p>
           
@@ -164,7 +215,7 @@ export default function AdminMode() {
             className="btn" 
             style={{ width: '100%', background: 'rgba(239, 68, 68, 0.2)', color: 'var(--accent-red)', border: '1px solid var(--accent-red)' }}
             onClick={(e) => { e.stopPropagation(); handleStrike(2); }}
-            disabled={session.team_2_strikes >= 3}
+            disabled={session.team_2_strikes >= 3 || isGameOver}
           >
             ❌ خطأ (Strike)
           </button>
@@ -175,26 +226,39 @@ export default function AdminMode() {
       {/* Answers Grid for Admin */}
       <h3 className="title-glow" style={{ marginBottom: '1rem', fontSize: '1.4rem' }}>لوحة الإجابات</h3>
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-        {answers.map((ans, idx) => {
-          const isRevealed = session.revealed_answers.includes(ans.rank)
+        {answers.map((ans) => {
+          const answeringTeam = revealedMap[ans.rank]
+          const isRevealed = !!answeringTeam
+          
+          // Determine color based on who answered that question
+          const rowColor = !isRevealed ? 'var(--bg-card)' : answeringTeam === 1 ? 'rgba(59, 130, 246, 0.2)' : 'rgba(236, 72, 153, 0.2)'
+          const borderColor = !isRevealed ? 'var(--glass-border)' : answeringTeam === 1 ? 'var(--team1-color)' : 'var(--team2-color)'
+          const iconColor = !isRevealed ? '#fff' : answeringTeam === 1 ? 'var(--team1-color)' : 'var(--team2-color)'
           
           return (
             <div 
               key={ans.id}
-              className="glass-panel flex-between"
+              className={`glass-panel flex-between ${isRevealed ? 'anim-fade-in' : ''}`}
               style={{ 
                 padding: '1rem 1.5rem',
-                backgroundColor: isRevealed ? 'rgba(34, 197, 94, 0.2)' : 'var(--bg-card)',
-                borderColor: isRevealed ? 'var(--accent-green)' : 'var(--glass-border)'
+                backgroundColor: rowColor,
+                borderColor: borderColor
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--btn-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: isRevealed ? borderColor : 'var(--btn-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#fff' }}>
                   {ans.rank}
                 </div>
-                <span style={{ fontSize: '1.3rem', fontWeight: '600', color: isRevealed ? '#fff' : 'var(--text-muted)' }}>
-                  {ans.answer_ar}
-                </span>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontSize: '1.3rem', fontWeight: '600', color: isRevealed ? '#fff' : 'var(--text-muted)' }}>
+                    {ans.answer_ar}
+                  </span>
+                  {isRevealed && (
+                    <span style={{ fontSize: '0.8rem', color: borderColor, fontWeight: 'bold' }}>
+                      (أجاب: الفريق {answeringTeam === 1 ? 'الأول' : 'الثاني'})
+                    </span>
+                  )}
+                </div>
               </div>
               
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -207,13 +271,13 @@ export default function AdminMode() {
                   style={{ 
                     padding: '0.5rem 1rem', 
                     background: isRevealed ? 'transparent' : 'var(--accent-green)',
-                    color: isRevealed ? 'var(--accent-green)' : '#fff',
-                    border: isRevealed ? '1px solid var(--accent-green)' : 'none'
+                    color: isRevealed ? iconColor : '#fff',
+                    border: isRevealed ? `1px solid ${borderColor}` : 'none'
                   }}
                   onClick={() => handleReveal(ans.rank)}
                   disabled={isRevealed}
                 >
-                  {isRevealed ? <Eye size={20} /> : <EyeOff size={20} />}
+                  {isRevealed ? <Eye size={20} color={iconColor}/> : <EyeOff size={20} />}
                   {isRevealed ? 'مكشوف' : 'كشف'}
                 </button>
               </div>

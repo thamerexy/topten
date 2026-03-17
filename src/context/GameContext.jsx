@@ -95,7 +95,7 @@ export function GameProvider({ children }) {
         team_2_score: 0,
         team_1_strikes: 0,
         team_2_strikes: 0,
-        revealed_answers: []
+        revealed_answers: {}
       })
       .select()
       .single()
@@ -119,11 +119,18 @@ export function GameProvider({ children }) {
     if (error) {
       console.error('Update session error:', error)
     }
-    // We don't eagerly update local state, because Realtime will push the change and avoid race conditions.
-    // However, for immediate UI feedback, we can optimistically update:
     if (data) {
       setSession(data)
     }
+  }
+
+  // Helper to determine the next playing team
+  function getNextTeam(currentTeam, strikes1, strikes2) {
+    const otherTeam = currentTeam === 1 ? 2 : 1;
+    // If the other team already has 3 strikes, the turn stays with the current team
+    if (otherTeam === 1 && strikes1 >= 3) return 2;
+    if (otherTeam === 2 && strikes2 >= 3) return 1;
+    return otherTeam;
   }
 
   const value = {
@@ -132,7 +139,8 @@ export function GameProvider({ children }) {
     answers,
     loading,
     startNewGame,
-    updateSession
+    updateSession,
+    getNextTeam
   }
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>

@@ -24,7 +24,7 @@ CREATE TABLE public.top_game_sessions (
     team_2_score INTEGER DEFAULT 0,
     team_1_strikes INTEGER DEFAULT 0,
     team_2_strikes INTEGER DEFAULT 0,
-    revealed_answers INTEGER[] DEFAULT '{}', -- Array of ranks (1-10) revealed
+    revealed_answers JSONB DEFAULT '{}'::jsonb, -- Map of Rank -> Team ID (e.g., {"1": 1})
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
