@@ -220,10 +220,10 @@ export default function AdminMode() {
           </button>
         </div>
 
-        {/* Swipeable Answers Cards for Admin */}
-        <div className="carousel-container">
+        {/* Grid Answers for Admin */}
+        <div className="admin-answers-grid">
           {answers.length === 0 && (
-            <div className="carousel-card glass-panel flex-center" style={{ minHeight: '300px' }}>
+            <div className="glass-panel flex-center" style={{ gridColumn: '1 / -1', minHeight: '200px' }}>
               <p className="anim-pulse">جاري تحميل الإجابات...</p>
             </div>
           )}
@@ -240,49 +240,44 @@ export default function AdminMode() {
                 key={ans.id}
                 className={`carousel-card glass-panel ${isRevealed ? 'anim-fade-in' : ''}`}
                 style={{ 
-                  padding: '1.5rem',
+                  padding: '1rem',
                   display: 'flex',
                   flexDirection: 'column',
-                  gap: '1rem',
+                  gap: '0.8rem',
                   backgroundColor: rowColor,
                   borderColor: borderColor,
                   position: 'relative'
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-                  <div style={{ width: '50px', height: '50px', borderRadius: '50%', background: isRevealed ? borderColor : 'var(--btn-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.3rem', color: '#fff', flexShrink: 0 }}>
+                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: isRevealed ? borderColor : 'var(--btn-color)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.1rem', color: '#fff', flexShrink: 0 }}>
                     {ans.rank}
                   </div>
-                  <span className="badge" style={{ background: 'var(--bg-surface)', padding: '0.3rem 0.6rem', borderRadius: '4px', fontSize: '1rem', color: 'var(--accent-gold)' }}>
-                    {ans.points} نقطة
+                  <span className="badge" style={{ background: 'var(--bg-surface)', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.9rem', color: 'var(--accent-gold)' }}>
+                    {ans.points}
                   </span>
                 </div>
 
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                  <span style={{ fontSize: '1.4rem', fontWeight: '800', color: isRevealed ? '#fff' : 'var(--text-muted)', lineHeight: '1.4' }}>
+                  <span style={{ fontSize: '1.1rem', fontWeight: '800', color: isRevealed ? '#fff' : 'var(--text-muted)', lineHeight: '1.3' }}>
                     {ans.answer_ar}
                   </span>
-                  {isRevealed && (
-                    <span style={{ fontSize: '0.9rem', color: borderColor, fontWeight: 'bold', marginTop: '0.5rem' }}>
-                      (أجاب: {answeringTeam === 1 ? t1Name : t2Name})
-                    </span>
-                  )}
                 </div>
                 
                 <button 
-                  className="btn"
-                  style={{ 
-                    width: '100%',
-                    padding: '0.8rem', 
-                    background: isRevealed ? 'transparent' : 'var(--accent-green)',
-                    color: isRevealed ? iconColor : '#fff',
-                    border: isRevealed ? `1px solid ${borderColor}` : 'none',
-                    fontSize: '1.1rem'
-                  }}
-                  onClick={() => handleReveal(ans.rank)}
-                  disabled={isRevealed}
+                   className="btn"
+                   style={{ 
+                     width: '100%',
+                     padding: '0.6rem', 
+                     background: isRevealed ? 'transparent' : 'var(--accent-green)',
+                     color: isRevealed ? iconColor : '#fff',
+                     border: isRevealed ? `1px solid ${borderColor}` : 'none',
+                     fontSize: '1rem'
+                   }}
+                   onClick={() => handleReveal(ans.rank)}
+                   disabled={isRevealed}
                 >
-                  {isRevealed ? 'مكشوفة' : 'كشف الإجابة'}
+                  {isRevealed ? 'مكشوفة' : 'كشف'}
                 </button>
               </div>
             )
