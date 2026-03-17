@@ -9,38 +9,49 @@ export function GameProvider({ children }) {
   const [answers, setAnswers] = useState([])
   const [loading, setLoading] = useState(true)
 
-  // Fetch initial questions and setup realtime subscription for active session
+  // Step 1: Initial Boot - Load initial data once
   useEffect(() => {
-    // Only fetch if supabase is actually configured (not placeholder)
     if (import.meta.env.VITE_SUPABASE_URL) {
       loadInitialData()
-      
-      const sessionSub = supabase
-        .channel('schema-db-changes')
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'top_game_sessions',
-          },
-          (payload) => {
-            console.log('Realtime change received!', payload)
-            // Update the local session state when changes occur in DB
-            if (payload.new && (!session || payload.new.id === session.id)) {
-              setSession(payload.new)
-            }
-          }
-        )
-        .subscribe()
-
-      return () => {
-        supabase.removeChannel(sessionSub)
-      }
     } else {
       setLoading(false)
     }
-  }, [session?.id, session?.question_id])
+  }, [])
+
+  // Step 2: Session Monitoring & Realtime - Setup realtime subscription for active session
+  useEffect(() => {
+    if (!import.meta.env.VITE_SUPABASE_URL) return
+
+    const sessionSub = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'top_game_sessions',
+        },
+        async (payload) => {
+          console.log('Realtime change received!', payload)
+          if (payload.new) {
+            // If it's a completely new session or update to current one
+            // OR if a new active session is inserted (e.g., from another client)
+            if (!session || payload.new.id === session.id || (payload.eventType === 'INSERT' && payload.new.is_active)) {
+              setSession(payload.new)
+              // If the question changed, fetch its answers
+              if (payload.new.question_id !== session?.question_id) {
+                await loadAnswersForQuestion(payload.new.question_id)
+              }
+            }
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(sessionSub)
+    }
+  }, [session?.id, session?.question_id]) // Depend on session ID and question ID to re-evaluate subscription if session changes
 
   async function loadInitialData() {
     setLoading(true)
@@ -73,12 +84,21 @@ export function GameProvider({ children }) {
 
   async function loadAnswersForQuestion(questionId) {
     if (!questionId) return
-    const { data: ans } = await supabase
-      .from('top_answers')
-      .select('*')
-      .eq('question_id', questionId)
-      .order('rank', { ascending: true })
-    if (ans) setAnswers(ans)
+    try {
+      const { data: ans, error } = await supabase
+        .from('top_answers')
+        .select('*')
+        .eq('question_id', questionId)
+        .order('rank', { ascending: true })
+      
+      if (error) throw error
+      if (ans) {
+        console.log(`Loaded ${ans.length} answers for question ${questionId}`)
+        setAnswers(ans)
+      }
+    } catch (err) {
+      console.error("Error loading answers:", err)
+    }
   }
 
   async function startNewGame(questionId, team1Name = "الفريق الأول", team2Name = "الفريق الثاني") {

@@ -8,14 +8,6 @@ export default function AdminMode() {
   const [team1Name, setTeam1Name] = useState('الفريق الأول')
   const [team2Name, setTeam2Name] = useState('الفريق الثاني')
 
-  if (loading) {
-    return (
-      <div className="container flex-center" style={{ minHeight: '80vh' }}>
-        <h2 className="title-glow anim-pulse">جاري التحميل...</h2>
-      </div>
-    )
-  }
-
   const [isStarting, setIsStarting] = useState(false)
 
   const handleStart = async () => {
@@ -23,9 +15,27 @@ export default function AdminMode() {
     setIsStarting(true)
     try {
       await startNewGame(selectedTopic, team1Name, team2Name)
+    } catch (err) {
+      console.error(err)
+      alert("Error starting game. Please check your connection.")
     } finally {
       setIsStarting(false)
     }
+  }
+
+  const handleHardReset = () => {
+    if (confirm("سيتم إعادة تشغيل التطبيق بالكامل. هل أنت متأكد؟")) {
+      window.location.reload(true)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="container flex-center" style={{ minHeight: '80vh', flexDirection: 'column', gap: '2rem' }}>
+        <h2 className="title-glow anim-pulse">جاري التحميل...</h2>
+        <button className="btn" onClick={handleHardReset} style={{ fontSize: '0.9rem', opacity: 0.7 }}>إعادة تحميل الصفحة</button>
+      </div>
+    )
   }
 
   // If no session is active, show topic selector
@@ -195,13 +205,18 @@ export default function AdminMode() {
       
       <div className="container" style={{ flex: 1 }}>
         {/* Header Info */}
-        <div className="glass-panel" style={{ padding: '1rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ fontSize: '1.2rem', color: 'var(--text-highlight)' }}>
-            {activeQuestion?.topic_ar} 
-            {isGameOver && <span style={{ color: 'var(--accent-red)', marginRight: '1rem' }}>(انتهت)</span>}
-          </h2>
-          <button className="btn btn-ghost" style={{ padding: '0.4rem 0.8rem', fontSize: '0.9rem', borderColor: 'var(--accent-red)', color: 'var(--accent-red)' }} onClick={handleEndGame} disabled={isGameOver}>
-             إنهاء
+        <div className="glass-panel" style={{ padding: '0.8rem 1.2rem', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <h2 style={{ fontSize: '1rem', color: 'var(--text-highlight)', margin: 0 }}>
+              {activeQuestion?.topic_ar || "جاري التحميل..."} 
+            </h2>
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '0.3rem' }}>
+              <button onClick={handleHardReset} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '0.7rem', textDecoration: 'underline', padding: 0 }}>تحديث البيانات</button>
+            </div>
+          </div>
+          
+          <button className="btn btn-ghost" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', borderColor: 'var(--accent-red)', color: 'var(--accent-red)' }} onClick={handleEndGame} disabled={isGameOver}>
+             إنهاء اللعبة
           </button>
         </div>
 
