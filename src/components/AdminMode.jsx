@@ -82,10 +82,8 @@ export default function AdminMode() {
       updates.team_2_score = session.team_2_score + points
     }
 
-    // Switch turns unless game is literally ending now
-    if (Object.keys(newRevealedMap).length < 10) {
-      updates.current_team = getNextTeam(session.current_team, session.team_1_strikes, session.team_2_strikes)
-    } else {
+    // Check if game ends
+    if (Object.keys(newRevealedMap).length >= 10) {
       updates.is_active = false // All 10 revealed -> auto end game
     }
     
@@ -124,13 +122,6 @@ export default function AdminMode() {
       updateSession({ is_active: false })
     }
   }
-  
-  const handleSwitchTeam = (team) => {
-    // Only allow manual switch if not 3 strikes
-    if (team === 1 && session.team_1_strikes >= 3) return
-    if (team === 2 && session.team_2_strikes >= 3) return
-    updateSession({ current_team: team })
-  }
 
   return (
     <div className="container anim-slide-down" style={{ maxWidth: '800px', paddingBottom: '3rem' }}>
@@ -156,15 +147,13 @@ export default function AdminMode() {
             padding: '1.5rem', 
             textAlign: 'center', 
             backgroundColor: session.team_1_strikes >= 3 ? 'rgba(239, 68, 68, 0.1)' : 'var(--bg-card)',
-            border: session.current_team === 1 ? '2px solid var(--team1-color)' : '1px solid var(--glass-border)',
+            border: session.current_team === 1 ? '3px solid var(--team1-color)' : '1px solid var(--glass-border)',
             boxShadow: session.current_team === 1 ? '0 0 15px var(--team1-glow)' : 'none',
             transition: 'all 0.3s',
-            opacity: session.team_1_strikes >= 3 ? 0.6 : 1,
-            cursor: session.team_1_strikes >= 3 ? 'not-allowed' : 'pointer'
+            opacity: session.team_1_strikes >= 3 ? 0.6 : 1
           }}
-          onClick={() => handleSwitchTeam(1)}
         >
-          <div style={{ visibility: session.current_team === 1 ? 'visible' : 'hidden', color: 'var(--team1-color)', fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>▼ دور الفريق ▼</div>
+          <div style={{ visibility: session.current_team === 1 ? 'visible' : 'hidden', color: 'var(--team1-color)', fontSize: '1rem', fontWeight: 'bold', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '1px' }}>▼ دور الفريق ▼</div>
           <h3 style={{ color: 'var(--team1-color)', fontSize: '1.5rem', marginBottom: '0.5rem' }}>الفريق الأول</h3>
           <p style={{ fontSize: '2rem', fontWeight: 'bold' }}>{session.team_1_score}</p>
           
@@ -192,15 +181,13 @@ export default function AdminMode() {
             padding: '1.5rem', 
             textAlign: 'center',
             backgroundColor: session.team_2_strikes >= 3 ? 'rgba(239, 68, 68, 0.1)' : 'var(--bg-card)',
-            border: session.current_team === 2 ? '2px solid var(--team2-color)' : '1px solid var(--glass-border)',
+            border: session.current_team === 2 ? '3px solid var(--team2-color)' : '1px solid var(--glass-border)',
             boxShadow: session.current_team === 2 ? '0 0 15px var(--team2-glow)' : 'none',
             transition: 'all 0.3s',
-            opacity: session.team_2_strikes >= 3 ? 0.6 : 1,
-            cursor: session.team_2_strikes >= 3 ? 'not-allowed' : 'pointer'
+            opacity: session.team_2_strikes >= 3 ? 0.6 : 1
           }}
-          onClick={() => handleSwitchTeam(2)}
         >
-          <div style={{ visibility: session.current_team === 2 ? 'visible' : 'hidden', color: 'var(--team2-color)', fontSize: '0.9rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>▼ دور الفريق ▼</div>
+          <div style={{ visibility: session.current_team === 2 ? 'visible' : 'hidden', color: 'var(--team2-color)', fontSize: '1rem', fontWeight: 'bold', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '1px' }}>▼ دور الفريق ▼</div>
           <h3 style={{ color: 'var(--team2-color)', fontSize: '1.5rem', marginBottom: '0.5rem' }}>الفريق الثاني</h3>
           <p style={{ fontSize: '2rem', fontWeight: 'bold' }}>{session.team_2_score}</p>
           
