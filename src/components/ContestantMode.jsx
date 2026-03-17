@@ -1,8 +1,9 @@
 import { useGame } from '../context/GameContext'
+import { useState, useEffect, useRef } from 'react'
 import { AlertTriangle, Trophy, Crown } from 'lucide-react'
 
 // Layout helper for the answers
-const AnswerSlot = ({ rank, answer, isRevealed, points, revealedByTeam }) => {
+const AnswerSlot = ({ rank, answer, isRevealed, points, revealedByTeam, isSpotlight }) => {
   
   // Set colors dynamically based on what team answered it
   const isTeam1 = revealedByTeam === 1
@@ -13,25 +14,12 @@ const AnswerSlot = ({ rank, answer, isRevealed, points, revealedByTeam }) => {
   const glowColor = !isRevealed ? 'none' : isTeam1 ? 'rgba(59, 130, 246, 0.4)' : 'rgba(236, 72, 153, 0.4)'
   const textShadowGlow = !isRevealed ? 'none' : isTeam1 ? '0 0 10px rgba(59, 130, 246, 0.8)' : '0 0 10px rgba(236, 72, 153, 0.8)'
   
-  return (
-    <div 
-      className={`glass-panel flex-between ${isRevealed ? 'anim-flip-in' : ''}`}
-      style={{ 
-        padding: '1.2rem', 
-        marginBottom: '1rem',
-        minHeight: '80px',
-        backgroundColor: bgColor,
-        borderColor: borderColor,
-        boxShadow: isRevealed ? `0 0 15px ${glowColor}` : 'none',
-        position: 'relative',
-        overflow: 'hidden',
-        transition: 'all 0.5s ease-out'
-      }}
-    >
+  const cardContent = (
+    <>
       <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', zIndex: 2 }}>
         <div style={{ 
-          width: '45px', 
-          height: '45px', 
+          width: isSpotlight ? '80px' : '45px', 
+          height: isSpotlight ? '80px' : '45px', 
           borderRadius: '50%', 
           background: isRevealed ? borderColor : 'var(--bg-primary)', 
           color: isRevealed ? '#fff' : 'var(--text-muted)',
@@ -39,14 +27,15 @@ const AnswerSlot = ({ rank, answer, isRevealed, points, revealedByTeam }) => {
           alignItems: 'center', 
           justifyContent: 'center', 
           fontWeight: '900',
-          fontSize: '1.5rem',
-          border: `2px solid ${isRevealed ? 'transparent' : 'var(--glass-border)'}`
+          fontSize: isSpotlight ? '3rem' : '1.5rem',
+          border: `2px solid ${isRevealed ? 'transparent' : 'var(--glass-border)'}`,
+          transition: 'all 0.3s'
         }}>
           {rank}
         </div>
         
         {isRevealed ? (
-          <span style={{ fontSize: '1.8rem', fontWeight: '800', textShadow: textShadowGlow, color: '#fff' }}>
+          <span style={{ fontSize: isSpotlight ? '3.5rem' : '1.8rem', fontWeight: '800', textShadow: textShadowGlow, color: '#fff', transition: 'all 0.3s' }}>
             {answer}
           </span>
         ) : (
@@ -56,14 +45,15 @@ const AnswerSlot = ({ rank, answer, isRevealed, points, revealedByTeam }) => {
 
       {isRevealed && (
         <span style={{ 
-          fontSize: '1.5rem', 
+          fontSize: isSpotlight ? '2.5rem' : '1.5rem', 
           fontWeight: 'bold', 
           color: borderColor, 
           background: 'rgba(0,0,0,0.6)',
           padding: '0.4rem 1rem',
           borderRadius: 'var(--radius-sm)',
           zIndex: 2,
-          border: `1px solid ${borderColor}`
+          border: `1px solid ${borderColor}`,
+          transition: 'all 0.3s'
         }}>
           {points}
         </span>
@@ -71,7 +61,50 @@ const AnswerSlot = ({ rank, answer, isRevealed, points, revealedByTeam }) => {
       
       {/* Background glow on reveal */}
       {isRevealed && <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: `linear-gradient(90deg, transparent, ${glowColor}, transparent)`, zIndex: 1 }} />}
-    </div>
+    </>
+  )
+
+  return (
+    <>
+      {/* The Normal Grid Card */}
+      <div 
+        className={`glass-panel flex-between ${isRevealed && !isSpotlight ? 'anim-flip-in' : ''}`}
+        style={{ 
+          padding: '1.2rem', 
+          marginBottom: '1rem',
+          minHeight: '80px',
+          backgroundColor: bgColor,
+          borderColor: borderColor,
+          boxShadow: isRevealed && !isSpotlight ? `0 0 15px ${glowColor}` : 'none',
+          position: 'relative',
+          overflow: 'hidden',
+          transition: 'all 0.5s ease-out',
+          opacity: isSpotlight ? 0 : 1 // Hide the normal card while it's in the spotlight
+        }}
+      >
+        {cardContent}
+      </div>
+
+      {/* The Cinematic Spotlight Overlay */}
+      {isSpotlight && (
+        <div className="spotlight-overlay">
+          <div 
+            className="glass-panel flex-between spotlight-card"
+            style={{ 
+              padding: '3rem', 
+              backgroundColor: bgColor,
+              borderColor: borderColor,
+              boxShadow: `0 0 50px ${glowColor}`,
+              position: 'relative',
+              overflow: 'hidden',
+              borderRadius: 'var(--radius-lg)'
+            }}
+          >
+            {cardContent}
+          </div>
+        </div>
+      )}
+    </>
   )
 }
 
@@ -87,6 +120,9 @@ export default function ContestantMode() {
     )
   }
 
+  const [spotlightRank, setSpotlightRank] = useState(null)
+  const prevKeys = useRef([])
+
   const activeQuestion = questions.find(q => q.id === session.question_id)
   
   // Split answers into two columns for Top 10 layout
@@ -100,8 +136,27 @@ export default function ContestantMode() {
   } catch(e) { /* ignore */ }
   if (Array.isArray(revealedMap)) revealedMap = {};
 
+  // Cinematic Spotlight trigger
+  useEffect(() => {
+    const currentKeys = Object.keys(revealedMap)
+    if (currentKeys.length > prevKeys.current.length && prevKeys.current.length > 0) {
+      // Find the new key that wasn't there before
+      const newKey = currentKeys.find(k => !prevKeys.current.includes(k))
+      if (newKey) {
+        setSpotlightRank(Number(newKey))
+        // Auto-remove the spotlight overlay after 3.2 seconds
+        setTimeout(() => setSpotlightRank(null), 3200)
+      }
+    }
+    prevKeys.current = currentKeys
+  }, [revealedMap])
+
   // Determine Game state and Winners
   const isGameOver = !session.is_active;
+  
+  const t1Name = session.team_1_name || 'الفريق الأول'
+  const t2Name = session.team_2_name || 'الفريق الثاني'
+  
   let winner = null;
   if (isGameOver) {
     if (session.team_1_score > session.team_2_score) winner = 1;
@@ -141,11 +196,11 @@ export default function ContestantMode() {
           }}>
             <Crown size={100} color={winner === 1 ? 'var(--team1-color)' : winner === 2 ? 'var(--team2-color)' : 'var(--accent-gold)'} style={{ margin: '0 auto 2rem' }} className="anim-pulse" />
             <h1 style={{ fontSize: '4rem', marginBottom: '1rem', color: winner === 1 ? 'var(--team1-color)' : winner === 2 ? 'var(--team2-color)' : 'var(--accent-gold)' }}>
-              {winner === 1 ? 'فاز الفريق الأول!' : winner === 2 ? 'فاز الفريق الثاني!' : 'تعادل!'}
+              {winner === 1 ? `فاز ${t1Name}!` : winner === 2 ? `فاز ${t2Name}!` : 'التـــــعـــــادل!'}
             </h1>
             <div style={{ display: 'flex', gap: '4rem', fontSize: '2.5rem', fontWeight: 'bold', justifyContent: 'center', marginTop: '3rem' }}>
-               <div style={{ color: 'var(--team1-color)' }}>الفريق الأول: {session.team_1_score}</div>
-               <div style={{ color: 'var(--team2-color)' }}>الفريق الثاني: {session.team_2_score}</div>
+               <div style={{ color: 'var(--team1-color)' }}>{t1Name}: {session.team_1_score}</div>
+               <div style={{ color: 'var(--team2-color)' }}>{t2Name}: {session.team_2_score}</div>
             </div>
           </div>
         </div>
@@ -163,7 +218,7 @@ export default function ContestantMode() {
       }}>
         {session.current_team === 1 && <div style={{ position: 'absolute', top: 0, width: '100%', height: '5px', background: 'var(--team1-color)' }} />}
         
-        <h2 style={{ fontSize: '2.5rem', color: 'var(--team1-color)', marginBottom: '1rem' }}>الفريق الأول</h2>
+        <h2 style={{ fontSize: '2.5rem', color: 'var(--team1-color)', marginBottom: '1rem', textAlign: 'center' }}>{t1Name}</h2>
         
         <div style={{ fontSize: '6rem', fontWeight: '900', textShadow: '0 0 20px var(--team1-glow)' }}>
           {session.team_1_score}
@@ -210,6 +265,7 @@ export default function ContestantMode() {
                 points={ans.points}
                 isRevealed={!!revealedMap[ans.rank]}
                 revealedByTeam={revealedMap[ans.rank]}
+                isSpotlight={spotlightRank === ans.rank}
               />
             ))}
           </div>
@@ -224,6 +280,7 @@ export default function ContestantMode() {
                 points={ans.points}
                 isRevealed={!!revealedMap[ans.rank]}
                 revealedByTeam={revealedMap[ans.rank]}
+                isSpotlight={spotlightRank === ans.rank}
               />
             ))}
           </div>
@@ -244,7 +301,7 @@ export default function ContestantMode() {
       }}>
         {session.current_team === 2 && <div style={{ position: 'absolute', top: 0, width: '100%', height: '5px', background: 'var(--team2-color)' }} />}
         
-        <h2 style={{ fontSize: '2.5rem', color: 'var(--team2-color)', marginBottom: '1rem' }}>الفريق الثاني</h2>
+        <h2 style={{ fontSize: '2.5rem', color: 'var(--team2-color)', marginBottom: '1rem', textAlign: 'center' }}>{t2Name}</h2>
         
         <div style={{ fontSize: '6rem', fontWeight: '900', textShadow: '0 0 20px var(--team2-glow)' }}>
           {session.team_2_score}

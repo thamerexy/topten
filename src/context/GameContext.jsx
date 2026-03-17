@@ -77,7 +77,7 @@ export function GameProvider({ children }) {
     if (ans) setAnswers(ans)
   }
 
-  async function startNewGame(questionId) {
+  async function startNewGame(questionId, team1Name = "الفريق الأول", team2Name = "الفريق الثاني") {
     // End active games
     await supabase
       .from('top_game_sessions')
@@ -89,6 +89,8 @@ export function GameProvider({ children }) {
       .from('top_game_sessions')
       .insert({
         question_id: questionId,
+        team_1_name: team1Name,
+        team_2_name: team2Name,
         is_active: true,
         current_team: 1,
         team_1_score: 0,
