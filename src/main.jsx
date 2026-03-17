@@ -11,7 +11,7 @@ registerSW({ immediate: true })
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <GameProvider>
-      <BrowserRouter>
+      <BrowserRouter basename="/topten">
         <App />
       </BrowserRouter>
     </GameProvider>
