@@ -16,6 +16,18 @@ export default function AdminMode() {
     )
   }
 
+  const [isStarting, setIsStarting] = useState(false)
+
+  const handleStart = async () => {
+    if (!selectedTopic || !team1Name || !team2Name) return
+    setIsStarting(true)
+    try {
+      await startNewGame(selectedTopic, team1Name, team2Name)
+    } finally {
+      setIsStarting(false)
+    }
+  }
+
   // If no session is active, show topic selector
   if (!session || !session.is_active) {
     return (
@@ -59,11 +71,11 @@ export default function AdminMode() {
             
             <button 
               className="btn btn-primary" 
-              disabled={!selectedTopic || !team1Name || !team2Name}
-              onClick={() => startNewGame(selectedTopic, team1Name, team2Name)}
+              disabled={!selectedTopic || !team1Name || !team2Name || isStarting}
+              onClick={handleStart}
               style={{ padding: '1.2rem', fontSize: '1.2rem', marginTop: '1rem' }}
             >
-              <PlayCircle size={24} /> ابدأ اللعبة
+              {isStarting ? <div className="anim-pulse">جاري التحميل...</div> : <><PlayCircle size={24} /> ابدأ اللعبة</>}
             </button>
           </div>
         </div>

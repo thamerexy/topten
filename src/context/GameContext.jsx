@@ -78,34 +78,58 @@ export function GameProvider({ children }) {
   }
 
   async function startNewGame(questionId, team1Name = "الفريق الأول", team2Name = "الفريق الثاني") {
-    // End active games
-    await supabase
-      .from('top_game_sessions')
-      .update({ is_active: false })
-      .eq('is_active', true)
+    console.log("Starting new game for question:", questionId, { team1Name, team2Name })
+    
+    try {
+      // 1. End any active games first
+      const { error: endError } = await supabase
+        .from('top_game_sessions')
+        .update({ is_active: false })
+        .eq('is_active', true)
+      
+      if (endError) {
+        console.warn("Minor error ending old sessions:", endError)
+        // We continue anyway, as the next insert might succeed
+      }
 
-    // Create new session
-    const { data, error } = await supabase
-      .from('top_game_sessions')
-      .insert({
-        question_id: questionId,
-        team_1_name: team1Name,
-        team_2_name: team2Name,
-        is_active: true,
-        current_team: 1,
-        team_1_score: 0,
-        team_2_score: 0,
-        team_1_strikes: 0,
-        team_2_strikes: 0,
-        revealed_answers: {}
-      })
-      .select()
-      .single()
+      // 2. Create new session
+      const { data, error } = await supabase
+        .from('top_game_sessions')
+        .insert({
+          question_id: questionId,
+          team_1_name: team1Name,
+          team_2_name: team2Name,
+          is_active: true,
+          current_team: 1,
+          team_1_score: 0,
+          team_2_score: 0,
+          team_1_strikes: 0,
+          team_2_strikes: 0,
+          revealed_answers: {}
+        })
+        .select()
+        .single()
 
-    if (error) console.error(error)
-    if (data) {
-      setSession(data)
-      await loadAnswersForQuestion(questionId)
+      if (error) {
+        console.error("Critical error creating new game session:", error)
+        let msg = "فشل بدء اللعبة. "
+        if (error.message.includes('column "team_1_name" does not exist')) {
+          msg += "تأكد من تشغيل ملف الترقية (Migration) في Supabase لإضافة أعمدة الأسماء."
+        } else {
+          msg += "خطأ: " + error.message
+        }
+        alert(msg)
+        return
+      }
+
+      if (data) {
+        console.log("Successfully created session:", data.id)
+        setSession(data)
+        await loadAnswersForQuestion(questionId)
+      }
+    } catch (err) {
+      console.error("Unexpected exception in startNewGame:", err)
+      alert("حدث خطأ غير متوقع: " + err.message)
     }
   }
 
