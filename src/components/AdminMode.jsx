@@ -166,13 +166,21 @@ export default function AdminMode() {
     
     let newTeam1Strikes = session.team_1_strikes
     let newTeam2Strikes = session.team_2_strikes
+    let newTeam1Score = session.team_1_score
+    let newTeam2Score = session.team_2_score
 
     if (team === 1 && newTeam1Strikes < 3) {
       newTeam1Strikes += 1;
       updates.team_1_strikes = newTeam1Strikes;
+      // Penalty/Transfer: -20 from Team 1, +20 to Team 2
+      updates.team_1_score = Math.max(0, newTeam1Score - 20); // Floor at 0 for safety
+      updates.team_2_score = newTeam2Score + 20;
     } else if (team === 2 && newTeam2Strikes < 3) {
       newTeam2Strikes += 1;
       updates.team_2_strikes = newTeam2Strikes;
+      // Penalty/Transfer: -20 from Team 2, +20 to Team 1
+      updates.team_2_score = Math.max(0, newTeam2Score - 20); // Floor at 0 for safety
+      updates.team_1_score = newTeam1Score + 20;
     }
 
     // Check if both teams are locked out -> game over
